@@ -41,6 +41,12 @@ Some prompts were inspired by familiar pop-culture lanes such as spy thrillers, 
 2. Open any game card to play that title.
 3. Open any game's index.html directly if you want to jump into a specific folder.
 
+## Development Workflow
+
+The next batch should be treated as separate game briefs, not as generator variants.
+
+Start with [GAME-CONCEPTS.md](GAME-CONCEPTS.md) and build each title individually so the result has its own scoring, mechanics, UI, pacing, and feel.
+
 ## Generator
 
 Run this from the repo root:
