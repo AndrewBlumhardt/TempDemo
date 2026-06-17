@@ -1,0 +1,1491 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vibe Arcade Gallery</title>
+  <style>
+    :root {
+      --bg: #081018;
+      --bg-2: #112131;
+      --panel: #0d1722dd;
+      --text: #f8fafc;
+      --accent: #f4b860;
+      --muted: #c8d4e3;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 15% 10%, #2d4c63 0%, transparent 30%),
+        radial-gradient(circle at 80% 15%, #67401e 0%, transparent 28%),
+        linear-gradient(155deg, var(--bg), var(--bg-2));
+      min-height: 100vh;
+      padding: 18px;
+    }
+    .shell {
+      width: min(1200px, 100%);
+      margin: 0 auto;
+      background: var(--panel);
+      border: 1px solid #ffffff22;
+      border-radius: 20px;
+      padding: 18px;
+      box-shadow: 0 24px 60px #00000055;
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 4vw, 3.3rem);
+      letter-spacing: 0.02em;
+    }
+    .lede {
+      max-width: 70ch;
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 1rem;
+      margin: 10px 0 18px;
+    }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .toolbar-left {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    input, select, button {
+      border-radius: 12px;
+      border: 1px solid #ffffff24;
+      background: #ffffff10;
+      color: var(--text);
+      padding: 10px 12px;
+      font: inherit;
+    }
+    option { color: #111827; }
+    button {
+      background: linear-gradient(180deg, #f5cb7c, #e59a28);
+      color: #271400;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .meta {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .card {
+      background: #101d2b;
+      border: 1px solid #ffffff1f;
+      border-radius: 16px;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: 120px 1fr;
+      min-height: 260px;
+    }
+    .stamp {
+      position: relative;
+      padding: 12px;
+      border-bottom: 1px solid #ffffff18;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      color: #fff8ea;
+    }
+    .stamp::after {
+      content: "";
+      position: absolute;
+      inset: 10px;
+      border: 1px dashed #ffffff55;
+      border-radius: 12px;
+      pointer-events: none;
+    }
+    .stamp small {
+      font-size: 0.8rem;
+      opacity: 0.9;
+    }
+    .stamp strong {
+      font-size: 1.05rem;
+      line-height: 1.15;
+      max-width: 14ch;
+    }
+    .body {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .pill {
+      font-size: 0.77rem;
+      background: #ffffff12;
+      border: 1px solid #ffffff18;
+      border-radius: 999px;
+      padding: 3px 8px;
+      color: #d9e6f2;
+    }
+    .body p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.4;
+      flex: 1;
+    }
+    .body a {
+      display: inline-block;
+      text-decoration: none;
+      background: linear-gradient(180deg, #f5cb7c, #e59a28);
+      color: #271400;
+      font-weight: 700;
+      border-radius: 10px;
+      padding: 8px 10px;
+      text-align: center;
+    }
+    .pager {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 18px;
+      align-items: center;
+    }
+    .empty {
+      padding: 30px;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed #ffffff2b;
+      border-radius: 16px;
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <h1>Vibe Arcade Gallery</h1>
+    <p class="lede">A personal challenge: generate 100 playable HTML mini-games in a reasonable amount of time using vibe coding and GitHub Copilot. These games riff on broad arcade, fantasy, spy, adventure, and brawler genres without reproducing copyrighted characters or worlds.</p>
+    <section class="toolbar">
+      <div class="toolbar-left">
+        <input id="search" type="search" placeholder="Search games, themes, or modes">
+        <select id="themeFilter"><option value="all">All themes</option></select>
+        <select id="modeFilter"><option value="all">All modes</option></select>
+        <button id="randomPick" type="button">Random Pick</button>
+      </div>
+      <div class="meta" id="meta"></div>
+    </section>
+    <section id="grid" class="grid"></section>
+    <div id="empty" class="empty" hidden>No games match the current filters.</div>
+    <nav class="pager">
+      <button id="prev" type="button">Previous</button>
+      <span id="pageLabel" class="meta"></span>
+      <button id="next" type="button">Next</button>
+    </nav>
+  </main>
+  <script>
+    const gameData = [
+  {
+    "id": "001",
+    "slug": "001-shadow-spy-ops",
+    "title": "Shadow Spy Ops",
+    "theme": "Spy Ops",
+    "mode": "collector",
+    "goal": "secure dossiers",
+    "enemy": "lasers",
+    "summary": "collect shards and avoid threats",
+    "colorA": "#09111b",
+    "colorB": "#1f3a5f"
+  },
+  {
+    "id": "002",
+    "slug": "002-labyrinth-dungeon-crawler",
+    "title": "Labyrinth Dungeon Crawler",
+    "theme": "Dungeon Crawler",
+    "mode": "collector",
+    "goal": "recover runes",
+    "enemy": "mimics",
+    "summary": "collect shards and avoid threats",
+    "colorA": "#160f29",
+    "colorB": "#5b3f9b"
+  },
+  {
+    "id": "003",
+    "slug": "003-savage-heroic-fantasy-quest",
+    "title": "Savage Heroic Fantasy Quest",
+    "theme": "Heroic Fantasy Quest",
+    "mode": "collector",
+    "goal": "shatter idols",
+    "enemy": "raiders",
+    "summary": "collect shards and avoid threats",
+    "colorA": "#2f1608",
+    "colorB": "#b86712"
+  },
+  {
+    "id": "004",
+    "slug": "004-strike-arena-brawler",
+    "title": "Strike Arena Brawler",
+    "theme": "Arena Brawler",
+    "mode": "collector",
+    "goal": "land counters",
+    "enemy": "challengers",
+    "summary": "collect shards and avoid threats",
+    "colorA": "#260708",
+    "colorB": "#b11f31"
+  },
+  {
+    "id": "005",
+    "slug": "005-vector-space-patrol",
+    "title": "Vector Space Patrol",
+    "theme": "Space Patrol",
+    "mode": "collector",
+    "goal": "escort freighters",
+    "enemy": "void swarms",
+    "summary": "collect shards and avoid threats",
+    "colorA": "#070d22",
+    "colorB": "#2157d9"
+  },
+  {
+    "id": "006",
+    "slug": "006-glitch-cyber-runner",
+    "title": "Glitch Cyber Runner",
+    "theme": "Cyber Runner",
+    "mode": "collector",
+    "goal": "outrace hunters",
+    "enemy": "turrets",
+    "summary": "collect shards and avoid threats",
+    "colorA": "#12061b",
+    "colorB": "#52208d"
+  },
+  {
+    "id": "007",
+    "slug": "007-skylance-sky-raider",
+    "title": "Skylance Sky Raider",
+    "theme": "Sky Raider",
+    "mode": "collector",
+    "goal": "capture beacons",
+    "enemy": "zeppelins",
+    "summary": "collect shards and avoid threats",
+    "colorA": "#12233a",
+    "colorB": "#f97352"
+  },
+  {
+    "id": "008",
+    "slug": "008-hollow-haunted-escape",
+    "title": "Hollow Haunted Escape",
+    "theme": "Haunted Escape",
+    "mode": "collector",
+    "goal": "seal portals",
+    "enemy": "phantoms",
+    "summary": "collect shards and avoid threats",
+    "colorA": "#111827",
+    "colorB": "#374151"
+  },
+  {
+    "id": "009",
+    "slug": "009-temple-jungle-relic",
+    "title": "Temple Jungle Relic",
+    "theme": "Jungle Relic",
+    "mode": "collector",
+    "goal": "follow maps",
+    "enemy": "traps",
+    "summary": "collect shards and avoid threats",
+    "colorA": "#0d311e",
+    "colorB": "#4f7a2d"
+  },
+  {
+    "id": "010",
+    "slug": "010-current-ocean-frontier",
+    "title": "Current Ocean Frontier",
+    "theme": "Ocean Frontier",
+    "mode": "collector",
+    "goal": "avoid predators",
+    "enemy": "mines",
+    "summary": "collect shards and avoid threats",
+    "colorA": "#0b3440",
+    "colorB": "#1296d1"
+  },
+  {
+    "id": "011",
+    "slug": "011-shadow-spy-ops",
+    "title": "Shadow Spy Ops",
+    "theme": "Spy Ops",
+    "mode": "survival",
+    "goal": "extract intel",
+    "enemy": "guards",
+    "summary": "stay alive while pressure ramps up",
+    "colorA": "#09111b",
+    "colorB": "#1f3a5f"
+  },
+  {
+    "id": "012",
+    "slug": "012-labyrinth-dungeon-crawler",
+    "title": "Labyrinth Dungeon Crawler",
+    "theme": "Dungeon Crawler",
+    "mode": "survival",
+    "goal": "break seals",
+    "enemy": "slimes",
+    "summary": "stay alive while pressure ramps up",
+    "colorA": "#160f29",
+    "colorB": "#5b3f9b"
+  },
+  {
+    "id": "013",
+    "slug": "013-savage-heroic-fantasy-quest",
+    "title": "Savage Heroic Fantasy Quest",
+    "theme": "Heroic Fantasy Quest",
+    "mode": "survival",
+    "goal": "claim crystals",
+    "enemy": "serpent fiends",
+    "summary": "stay alive while pressure ramps up",
+    "colorA": "#2f1608",
+    "colorB": "#b86712"
+  },
+  {
+    "id": "014",
+    "slug": "014-strike-arena-brawler",
+    "title": "Strike Arena Brawler",
+    "theme": "Arena Brawler",
+    "mode": "survival",
+    "goal": "outlast rivals",
+    "enemy": "sparring bots",
+    "summary": "stay alive while pressure ramps up",
+    "colorA": "#260708",
+    "colorB": "#b11f31"
+  },
+  {
+    "id": "015",
+    "slug": "015-vector-space-patrol",
+    "title": "Vector Space Patrol",
+    "theme": "Space Patrol",
+    "mode": "survival",
+    "goal": "clear sectors",
+    "enemy": "pirates",
+    "summary": "stay alive while pressure ramps up",
+    "colorA": "#070d22",
+    "colorB": "#2157d9"
+  },
+  {
+    "id": "016",
+    "slug": "016-glitch-cyber-runner",
+    "title": "Glitch Cyber Runner",
+    "theme": "Cyber Runner",
+    "mode": "survival",
+    "goal": "escape grids",
+    "enemy": "trackers",
+    "summary": "stay alive while pressure ramps up",
+    "colorA": "#12061b",
+    "colorB": "#52208d"
+  },
+  {
+    "id": "017",
+    "slug": "017-skylance-sky-raider",
+    "title": "Skylance Sky Raider",
+    "theme": "Sky Raider",
+    "mode": "survival",
+    "goal": "salvage cargo",
+    "enemy": "tempests",
+    "summary": "stay alive while pressure ramps up",
+    "colorA": "#12233a",
+    "colorB": "#f97352"
+  },
+  {
+    "id": "018",
+    "slug": "018-hollow-haunted-escape",
+    "title": "Hollow Haunted Escape",
+    "theme": "Haunted Escape",
+    "mode": "survival",
+    "goal": "survive midnight",
+    "enemy": "dolls",
+    "summary": "stay alive while pressure ramps up",
+    "colorA": "#111827",
+    "colorB": "#374151"
+  },
+  {
+    "id": "019",
+    "slug": "019-temple-jungle-relic",
+    "title": "Temple Jungle Relic",
+    "theme": "Jungle Relic",
+    "mode": "survival",
+    "goal": "recover idols",
+    "enemy": "rivals",
+    "summary": "stay alive while pressure ramps up",
+    "colorA": "#0d311e",
+    "colorB": "#4f7a2d"
+  },
+  {
+    "id": "020",
+    "slug": "020-current-ocean-frontier",
+    "title": "Current Ocean Frontier",
+    "theme": "Ocean Frontier",
+    "mode": "survival",
+    "goal": "repair subs",
+    "enemy": "sharks",
+    "summary": "stay alive while pressure ramps up",
+    "colorA": "#0b3440",
+    "colorB": "#1296d1"
+  },
+  {
+    "id": "021",
+    "slug": "021-shadow-spy-ops",
+    "title": "Shadow Spy Ops",
+    "theme": "Spy Ops",
+    "mode": "duel",
+    "goal": "secure dossiers",
+    "enemy": "lasers",
+    "summary": "strike enemies and survive close quarters",
+    "colorA": "#09111b",
+    "colorB": "#1f3a5f"
+  },
+  {
+    "id": "022",
+    "slug": "022-labyrinth-dungeon-crawler",
+    "title": "Labyrinth Dungeon Crawler",
+    "theme": "Dungeon Crawler",
+    "mode": "duel",
+    "goal": "recover runes",
+    "enemy": "mimics",
+    "summary": "strike enemies and survive close quarters",
+    "colorA": "#160f29",
+    "colorB": "#5b3f9b"
+  },
+  {
+    "id": "023",
+    "slug": "023-savage-heroic-fantasy-quest",
+    "title": "Savage Heroic Fantasy Quest",
+    "theme": "Heroic Fantasy Quest",
+    "mode": "duel",
+    "goal": "shatter idols",
+    "enemy": "raiders",
+    "summary": "strike enemies and survive close quarters",
+    "colorA": "#2f1608",
+    "colorB": "#b86712"
+  },
+  {
+    "id": "024",
+    "slug": "024-strike-arena-brawler",
+    "title": "Strike Arena Brawler",
+    "theme": "Arena Brawler",
+    "mode": "duel",
+    "goal": "land counters",
+    "enemy": "challengers",
+    "summary": "strike enemies and survive close quarters",
+    "colorA": "#260708",
+    "colorB": "#b11f31"
+  },
+  {
+    "id": "025",
+    "slug": "025-vector-space-patrol",
+    "title": "Vector Space Patrol",
+    "theme": "Space Patrol",
+    "mode": "duel",
+    "goal": "escort freighters",
+    "enemy": "void swarms",
+    "summary": "strike enemies and survive close quarters",
+    "colorA": "#070d22",
+    "colorB": "#2157d9"
+  },
+  {
+    "id": "026",
+    "slug": "026-glitch-cyber-runner",
+    "title": "Glitch Cyber Runner",
+    "theme": "Cyber Runner",
+    "mode": "duel",
+    "goal": "outrace hunters",
+    "enemy": "turrets",
+    "summary": "strike enemies and survive close quarters",
+    "colorA": "#12061b",
+    "colorB": "#52208d"
+  },
+  {
+    "id": "027",
+    "slug": "027-skylance-sky-raider",
+    "title": "Skylance Sky Raider",
+    "theme": "Sky Raider",
+    "mode": "duel",
+    "goal": "capture beacons",
+    "enemy": "zeppelins",
+    "summary": "strike enemies and survive close quarters",
+    "colorA": "#12233a",
+    "colorB": "#f97352"
+  },
+  {
+    "id": "028",
+    "slug": "028-hollow-haunted-escape",
+    "title": "Hollow Haunted Escape",
+    "theme": "Haunted Escape",
+    "mode": "duel",
+    "goal": "seal portals",
+    "enemy": "phantoms",
+    "summary": "strike enemies and survive close quarters",
+    "colorA": "#111827",
+    "colorB": "#374151"
+  },
+  {
+    "id": "029",
+    "slug": "029-temple-jungle-relic",
+    "title": "Temple Jungle Relic",
+    "theme": "Jungle Relic",
+    "mode": "duel",
+    "goal": "follow maps",
+    "enemy": "traps",
+    "summary": "strike enemies and survive close quarters",
+    "colorA": "#0d311e",
+    "colorB": "#4f7a2d"
+  },
+  {
+    "id": "030",
+    "slug": "030-current-ocean-frontier",
+    "title": "Current Ocean Frontier",
+    "theme": "Ocean Frontier",
+    "mode": "duel",
+    "goal": "avoid predators",
+    "enemy": "mines",
+    "summary": "strike enemies and survive close quarters",
+    "colorA": "#0b3440",
+    "colorB": "#1296d1"
+  },
+  {
+    "id": "031",
+    "slug": "031-shadow-spy-ops",
+    "title": "Shadow Spy Ops",
+    "theme": "Spy Ops",
+    "mode": "rescue",
+    "goal": "extract intel",
+    "enemy": "guards",
+    "summary": "grab capsules and pull them back to center",
+    "colorA": "#09111b",
+    "colorB": "#1f3a5f"
+  },
+  {
+    "id": "032",
+    "slug": "032-labyrinth-dungeon-crawler",
+    "title": "Labyrinth Dungeon Crawler",
+    "theme": "Dungeon Crawler",
+    "mode": "rescue",
+    "goal": "break seals",
+    "enemy": "slimes",
+    "summary": "grab capsules and pull them back to center",
+    "colorA": "#160f29",
+    "colorB": "#5b3f9b"
+  },
+  {
+    "id": "033",
+    "slug": "033-savage-heroic-fantasy-quest",
+    "title": "Savage Heroic Fantasy Quest",
+    "theme": "Heroic Fantasy Quest",
+    "mode": "rescue",
+    "goal": "claim crystals",
+    "enemy": "serpent fiends",
+    "summary": "grab capsules and pull them back to center",
+    "colorA": "#2f1608",
+    "colorB": "#b86712"
+  },
+  {
+    "id": "034",
+    "slug": "034-strike-arena-brawler",
+    "title": "Strike Arena Brawler",
+    "theme": "Arena Brawler",
+    "mode": "rescue",
+    "goal": "outlast rivals",
+    "enemy": "sparring bots",
+    "summary": "grab capsules and pull them back to center",
+    "colorA": "#260708",
+    "colorB": "#b11f31"
+  },
+  {
+    "id": "035",
+    "slug": "035-vector-space-patrol",
+    "title": "Vector Space Patrol",
+    "theme": "Space Patrol",
+    "mode": "rescue",
+    "goal": "clear sectors",
+    "enemy": "pirates",
+    "summary": "grab capsules and pull them back to center",
+    "colorA": "#070d22",
+    "colorB": "#2157d9"
+  },
+  {
+    "id": "036",
+    "slug": "036-glitch-cyber-runner",
+    "title": "Glitch Cyber Runner",
+    "theme": "Cyber Runner",
+    "mode": "rescue",
+    "goal": "escape grids",
+    "enemy": "trackers",
+    "summary": "grab capsules and pull them back to center",
+    "colorA": "#12061b",
+    "colorB": "#52208d"
+  },
+  {
+    "id": "037",
+    "slug": "037-skylance-sky-raider",
+    "title": "Skylance Sky Raider",
+    "theme": "Sky Raider",
+    "mode": "rescue",
+    "goal": "salvage cargo",
+    "enemy": "tempests",
+    "summary": "grab capsules and pull them back to center",
+    "colorA": "#12233a",
+    "colorB": "#f97352"
+  },
+  {
+    "id": "038",
+    "slug": "038-hollow-haunted-escape",
+    "title": "Hollow Haunted Escape",
+    "theme": "Haunted Escape",
+    "mode": "rescue",
+    "goal": "survive midnight",
+    "enemy": "dolls",
+    "summary": "grab capsules and pull them back to center",
+    "colorA": "#111827",
+    "colorB": "#374151"
+  },
+  {
+    "id": "039",
+    "slug": "039-temple-jungle-relic",
+    "title": "Temple Jungle Relic",
+    "theme": "Jungle Relic",
+    "mode": "rescue",
+    "goal": "recover idols",
+    "enemy": "rivals",
+    "summary": "grab capsules and pull them back to center",
+    "colorA": "#0d311e",
+    "colorB": "#4f7a2d"
+  },
+  {
+    "id": "040",
+    "slug": "040-current-ocean-frontier",
+    "title": "Current Ocean Frontier",
+    "theme": "Ocean Frontier",
+    "mode": "rescue",
+    "goal": "repair subs",
+    "enemy": "sharks",
+    "summary": "grab capsules and pull them back to center",
+    "colorA": "#0b3440",
+    "colorB": "#1296d1"
+  },
+  {
+    "id": "041",
+    "slug": "041-shadow-spy-ops",
+    "title": "Shadow Spy Ops",
+    "theme": "Spy Ops",
+    "mode": "race",
+    "goal": "secure dossiers",
+    "enemy": "lasers",
+    "summary": "hit checkpoints before the swarm closes in",
+    "colorA": "#09111b",
+    "colorB": "#1f3a5f"
+  },
+  {
+    "id": "042",
+    "slug": "042-labyrinth-dungeon-crawler",
+    "title": "Labyrinth Dungeon Crawler",
+    "theme": "Dungeon Crawler",
+    "mode": "race",
+    "goal": "recover runes",
+    "enemy": "mimics",
+    "summary": "hit checkpoints before the swarm closes in",
+    "colorA": "#160f29",
+    "colorB": "#5b3f9b"
+  },
+  {
+    "id": "043",
+    "slug": "043-savage-heroic-fantasy-quest",
+    "title": "Savage Heroic Fantasy Quest",
+    "theme": "Heroic Fantasy Quest",
+    "mode": "race",
+    "goal": "shatter idols",
+    "enemy": "raiders",
+    "summary": "hit checkpoints before the swarm closes in",
+    "colorA": "#2f1608",
+    "colorB": "#b86712"
+  },
+  {
+    "id": "044",
+    "slug": "044-strike-arena-brawler",
+    "title": "Strike Arena Brawler",
+    "theme": "Arena Brawler",
+    "mode": "race",
+    "goal": "land counters",
+    "enemy": "challengers",
+    "summary": "hit checkpoints before the swarm closes in",
+    "colorA": "#260708",
+    "colorB": "#b11f31"
+  },
+  {
+    "id": "045",
+    "slug": "045-vector-space-patrol",
+    "title": "Vector Space Patrol",
+    "theme": "Space Patrol",
+    "mode": "race",
+    "goal": "escort freighters",
+    "enemy": "void swarms",
+    "summary": "hit checkpoints before the swarm closes in",
+    "colorA": "#070d22",
+    "colorB": "#2157d9"
+  },
+  {
+    "id": "046",
+    "slug": "046-glitch-cyber-runner",
+    "title": "Glitch Cyber Runner",
+    "theme": "Cyber Runner",
+    "mode": "race",
+    "goal": "outrace hunters",
+    "enemy": "turrets",
+    "summary": "hit checkpoints before the swarm closes in",
+    "colorA": "#12061b",
+    "colorB": "#52208d"
+  },
+  {
+    "id": "047",
+    "slug": "047-skylance-sky-raider",
+    "title": "Skylance Sky Raider",
+    "theme": "Sky Raider",
+    "mode": "race",
+    "goal": "capture beacons",
+    "enemy": "zeppelins",
+    "summary": "hit checkpoints before the swarm closes in",
+    "colorA": "#12233a",
+    "colorB": "#f97352"
+  },
+  {
+    "id": "048",
+    "slug": "048-hollow-haunted-escape",
+    "title": "Hollow Haunted Escape",
+    "theme": "Haunted Escape",
+    "mode": "race",
+    "goal": "seal portals",
+    "enemy": "phantoms",
+    "summary": "hit checkpoints before the swarm closes in",
+    "colorA": "#111827",
+    "colorB": "#374151"
+  },
+  {
+    "id": "049",
+    "slug": "049-temple-jungle-relic",
+    "title": "Temple Jungle Relic",
+    "theme": "Jungle Relic",
+    "mode": "race",
+    "goal": "follow maps",
+    "enemy": "traps",
+    "summary": "hit checkpoints before the swarm closes in",
+    "colorA": "#0d311e",
+    "colorB": "#4f7a2d"
+  },
+  {
+    "id": "050",
+    "slug": "050-current-ocean-frontier",
+    "title": "Current Ocean Frontier",
+    "theme": "Ocean Frontier",
+    "mode": "race",
+    "goal": "avoid predators",
+    "enemy": "mines",
+    "summary": "hit checkpoints before the swarm closes in",
+    "colorA": "#0b3440",
+    "colorB": "#1296d1"
+  },
+  {
+    "id": "051",
+    "slug": "051-shadow-spy-ops",
+    "title": "Shadow Spy Ops",
+    "theme": "Spy Ops",
+    "mode": "gauntlet",
+    "goal": "extract intel",
+    "enemy": "guards",
+    "summary": "clear waves and push your score",
+    "colorA": "#09111b",
+    "colorB": "#1f3a5f"
+  },
+  {
+    "id": "052",
+    "slug": "052-labyrinth-dungeon-crawler",
+    "title": "Labyrinth Dungeon Crawler",
+    "theme": "Dungeon Crawler",
+    "mode": "gauntlet",
+    "goal": "break seals",
+    "enemy": "slimes",
+    "summary": "clear waves and push your score",
+    "colorA": "#160f29",
+    "colorB": "#5b3f9b"
+  },
+  {
+    "id": "053",
+    "slug": "053-savage-heroic-fantasy-quest",
+    "title": "Savage Heroic Fantasy Quest",
+    "theme": "Heroic Fantasy Quest",
+    "mode": "gauntlet",
+    "goal": "claim crystals",
+    "enemy": "serpent fiends",
+    "summary": "clear waves and push your score",
+    "colorA": "#2f1608",
+    "colorB": "#b86712"
+  },
+  {
+    "id": "054",
+    "slug": "054-strike-arena-brawler",
+    "title": "Strike Arena Brawler",
+    "theme": "Arena Brawler",
+    "mode": "gauntlet",
+    "goal": "outlast rivals",
+    "enemy": "sparring bots",
+    "summary": "clear waves and push your score",
+    "colorA": "#260708",
+    "colorB": "#b11f31"
+  },
+  {
+    "id": "055",
+    "slug": "055-vector-space-patrol",
+    "title": "Vector Space Patrol",
+    "theme": "Space Patrol",
+    "mode": "gauntlet",
+    "goal": "clear sectors",
+    "enemy": "pirates",
+    "summary": "clear waves and push your score",
+    "colorA": "#070d22",
+    "colorB": "#2157d9"
+  },
+  {
+    "id": "056",
+    "slug": "056-glitch-cyber-runner",
+    "title": "Glitch Cyber Runner",
+    "theme": "Cyber Runner",
+    "mode": "gauntlet",
+    "goal": "escape grids",
+    "enemy": "trackers",
+    "summary": "clear waves and push your score",
+    "colorA": "#12061b",
+    "colorB": "#52208d"
+  },
+  {
+    "id": "057",
+    "slug": "057-skylance-sky-raider",
+    "title": "Skylance Sky Raider",
+    "theme": "Sky Raider",
+    "mode": "gauntlet",
+    "goal": "salvage cargo",
+    "enemy": "tempests",
+    "summary": "clear waves and push your score",
+    "colorA": "#12233a",
+    "colorB": "#f97352"
+  },
+  {
+    "id": "058",
+    "slug": "058-hollow-haunted-escape",
+    "title": "Hollow Haunted Escape",
+    "theme": "Haunted Escape",
+    "mode": "gauntlet",
+    "goal": "survive midnight",
+    "enemy": "dolls",
+    "summary": "clear waves and push your score",
+    "colorA": "#111827",
+    "colorB": "#374151"
+  },
+  {
+    "id": "059",
+    "slug": "059-temple-jungle-relic",
+    "title": "Temple Jungle Relic",
+    "theme": "Jungle Relic",
+    "mode": "gauntlet",
+    "goal": "recover idols",
+    "enemy": "rivals",
+    "summary": "clear waves and push your score",
+    "colorA": "#0d311e",
+    "colorB": "#4f7a2d"
+  },
+  {
+    "id": "060",
+    "slug": "060-current-ocean-frontier",
+    "title": "Current Ocean Frontier",
+    "theme": "Ocean Frontier",
+    "mode": "gauntlet",
+    "goal": "repair subs",
+    "enemy": "sharks",
+    "summary": "clear waves and push your score",
+    "colorA": "#0b3440",
+    "colorB": "#1296d1"
+  },
+  {
+    "id": "061",
+    "slug": "061-shadow-spy-ops",
+    "title": "Shadow Spy Ops",
+    "theme": "Spy Ops",
+    "mode": "stealth",
+    "goal": "secure dossiers",
+    "enemy": "lasers",
+    "summary": "thread through patrol routes and secure objectives",
+    "colorA": "#09111b",
+    "colorB": "#1f3a5f"
+  },
+  {
+    "id": "062",
+    "slug": "062-labyrinth-dungeon-crawler",
+    "title": "Labyrinth Dungeon Crawler",
+    "theme": "Dungeon Crawler",
+    "mode": "stealth",
+    "goal": "recover runes",
+    "enemy": "mimics",
+    "summary": "thread through patrol routes and secure objectives",
+    "colorA": "#160f29",
+    "colorB": "#5b3f9b"
+  },
+  {
+    "id": "063",
+    "slug": "063-savage-heroic-fantasy-quest",
+    "title": "Savage Heroic Fantasy Quest",
+    "theme": "Heroic Fantasy Quest",
+    "mode": "stealth",
+    "goal": "shatter idols",
+    "enemy": "raiders",
+    "summary": "thread through patrol routes and secure objectives",
+    "colorA": "#2f1608",
+    "colorB": "#b86712"
+  },
+  {
+    "id": "064",
+    "slug": "064-strike-arena-brawler",
+    "title": "Strike Arena Brawler",
+    "theme": "Arena Brawler",
+    "mode": "stealth",
+    "goal": "land counters",
+    "enemy": "challengers",
+    "summary": "thread through patrol routes and secure objectives",
+    "colorA": "#260708",
+    "colorB": "#b11f31"
+  },
+  {
+    "id": "065",
+    "slug": "065-vector-space-patrol",
+    "title": "Vector Space Patrol",
+    "theme": "Space Patrol",
+    "mode": "stealth",
+    "goal": "escort freighters",
+    "enemy": "void swarms",
+    "summary": "thread through patrol routes and secure objectives",
+    "colorA": "#070d22",
+    "colorB": "#2157d9"
+  },
+  {
+    "id": "066",
+    "slug": "066-glitch-cyber-runner",
+    "title": "Glitch Cyber Runner",
+    "theme": "Cyber Runner",
+    "mode": "stealth",
+    "goal": "outrace hunters",
+    "enemy": "turrets",
+    "summary": "thread through patrol routes and secure objectives",
+    "colorA": "#12061b",
+    "colorB": "#52208d"
+  },
+  {
+    "id": "067",
+    "slug": "067-skylance-sky-raider",
+    "title": "Skylance Sky Raider",
+    "theme": "Sky Raider",
+    "mode": "stealth",
+    "goal": "capture beacons",
+    "enemy": "zeppelins",
+    "summary": "thread through patrol routes and secure objectives",
+    "colorA": "#12233a",
+    "colorB": "#f97352"
+  },
+  {
+    "id": "068",
+    "slug": "068-hollow-haunted-escape",
+    "title": "Hollow Haunted Escape",
+    "theme": "Haunted Escape",
+    "mode": "stealth",
+    "goal": "seal portals",
+    "enemy": "phantoms",
+    "summary": "thread through patrol routes and secure objectives",
+    "colorA": "#111827",
+    "colorB": "#374151"
+  },
+  {
+    "id": "069",
+    "slug": "069-temple-jungle-relic",
+    "title": "Temple Jungle Relic",
+    "theme": "Jungle Relic",
+    "mode": "stealth",
+    "goal": "follow maps",
+    "enemy": "traps",
+    "summary": "thread through patrol routes and secure objectives",
+    "colorA": "#0d311e",
+    "colorB": "#4f7a2d"
+  },
+  {
+    "id": "070",
+    "slug": "070-current-ocean-frontier",
+    "title": "Current Ocean Frontier",
+    "theme": "Ocean Frontier",
+    "mode": "stealth",
+    "goal": "avoid predators",
+    "enemy": "mines",
+    "summary": "thread through patrol routes and secure objectives",
+    "colorA": "#0b3440",
+    "colorB": "#1296d1"
+  },
+  {
+    "id": "071",
+    "slug": "071-shadow-spy-ops",
+    "title": "Shadow Spy Ops",
+    "theme": "Spy Ops",
+    "mode": "breaker",
+    "goal": "extract intel",
+    "enemy": "guards",
+    "summary": "smash targets while dodging counterattacks",
+    "colorA": "#09111b",
+    "colorB": "#1f3a5f"
+  },
+  {
+    "id": "072",
+    "slug": "072-labyrinth-dungeon-crawler",
+    "title": "Labyrinth Dungeon Crawler",
+    "theme": "Dungeon Crawler",
+    "mode": "breaker",
+    "goal": "break seals",
+    "enemy": "slimes",
+    "summary": "smash targets while dodging counterattacks",
+    "colorA": "#160f29",
+    "colorB": "#5b3f9b"
+  },
+  {
+    "id": "073",
+    "slug": "073-savage-heroic-fantasy-quest",
+    "title": "Savage Heroic Fantasy Quest",
+    "theme": "Heroic Fantasy Quest",
+    "mode": "breaker",
+    "goal": "claim crystals",
+    "enemy": "serpent fiends",
+    "summary": "smash targets while dodging counterattacks",
+    "colorA": "#2f1608",
+    "colorB": "#b86712"
+  },
+  {
+    "id": "074",
+    "slug": "074-strike-arena-brawler",
+    "title": "Strike Arena Brawler",
+    "theme": "Arena Brawler",
+    "mode": "breaker",
+    "goal": "outlast rivals",
+    "enemy": "sparring bots",
+    "summary": "smash targets while dodging counterattacks",
+    "colorA": "#260708",
+    "colorB": "#b11f31"
+  },
+  {
+    "id": "075",
+    "slug": "075-vector-space-patrol",
+    "title": "Vector Space Patrol",
+    "theme": "Space Patrol",
+    "mode": "breaker",
+    "goal": "clear sectors",
+    "enemy": "pirates",
+    "summary": "smash targets while dodging counterattacks",
+    "colorA": "#070d22",
+    "colorB": "#2157d9"
+  },
+  {
+    "id": "076",
+    "slug": "076-glitch-cyber-runner",
+    "title": "Glitch Cyber Runner",
+    "theme": "Cyber Runner",
+    "mode": "breaker",
+    "goal": "escape grids",
+    "enemy": "trackers",
+    "summary": "smash targets while dodging counterattacks",
+    "colorA": "#12061b",
+    "colorB": "#52208d"
+  },
+  {
+    "id": "077",
+    "slug": "077-skylance-sky-raider",
+    "title": "Skylance Sky Raider",
+    "theme": "Sky Raider",
+    "mode": "breaker",
+    "goal": "salvage cargo",
+    "enemy": "tempests",
+    "summary": "smash targets while dodging counterattacks",
+    "colorA": "#12233a",
+    "colorB": "#f97352"
+  },
+  {
+    "id": "078",
+    "slug": "078-hollow-haunted-escape",
+    "title": "Hollow Haunted Escape",
+    "theme": "Haunted Escape",
+    "mode": "breaker",
+    "goal": "survive midnight",
+    "enemy": "dolls",
+    "summary": "smash targets while dodging counterattacks",
+    "colorA": "#111827",
+    "colorB": "#374151"
+  },
+  {
+    "id": "079",
+    "slug": "079-temple-jungle-relic",
+    "title": "Temple Jungle Relic",
+    "theme": "Jungle Relic",
+    "mode": "breaker",
+    "goal": "recover idols",
+    "enemy": "rivals",
+    "summary": "smash targets while dodging counterattacks",
+    "colorA": "#0d311e",
+    "colorB": "#4f7a2d"
+  },
+  {
+    "id": "080",
+    "slug": "080-current-ocean-frontier",
+    "title": "Current Ocean Frontier",
+    "theme": "Ocean Frontier",
+    "mode": "breaker",
+    "goal": "repair subs",
+    "enemy": "sharks",
+    "summary": "smash targets while dodging counterattacks",
+    "colorA": "#0b3440",
+    "colorB": "#1296d1"
+  },
+  {
+    "id": "081",
+    "slug": "081-shadow-spy-ops",
+    "title": "Shadow Spy Ops",
+    "theme": "Spy Ops",
+    "mode": "expedition",
+    "goal": "secure dossiers",
+    "enemy": "lasers",
+    "summary": "explore the field and bag discoveries",
+    "colorA": "#09111b",
+    "colorB": "#1f3a5f"
+  },
+  {
+    "id": "082",
+    "slug": "082-labyrinth-dungeon-crawler",
+    "title": "Labyrinth Dungeon Crawler",
+    "theme": "Dungeon Crawler",
+    "mode": "expedition",
+    "goal": "recover runes",
+    "enemy": "mimics",
+    "summary": "explore the field and bag discoveries",
+    "colorA": "#160f29",
+    "colorB": "#5b3f9b"
+  },
+  {
+    "id": "083",
+    "slug": "083-savage-heroic-fantasy-quest",
+    "title": "Savage Heroic Fantasy Quest",
+    "theme": "Heroic Fantasy Quest",
+    "mode": "expedition",
+    "goal": "shatter idols",
+    "enemy": "raiders",
+    "summary": "explore the field and bag discoveries",
+    "colorA": "#2f1608",
+    "colorB": "#b86712"
+  },
+  {
+    "id": "084",
+    "slug": "084-strike-arena-brawler",
+    "title": "Strike Arena Brawler",
+    "theme": "Arena Brawler",
+    "mode": "expedition",
+    "goal": "land counters",
+    "enemy": "challengers",
+    "summary": "explore the field and bag discoveries",
+    "colorA": "#260708",
+    "colorB": "#b11f31"
+  },
+  {
+    "id": "085",
+    "slug": "085-vector-space-patrol",
+    "title": "Vector Space Patrol",
+    "theme": "Space Patrol",
+    "mode": "expedition",
+    "goal": "escort freighters",
+    "enemy": "void swarms",
+    "summary": "explore the field and bag discoveries",
+    "colorA": "#070d22",
+    "colorB": "#2157d9"
+  },
+  {
+    "id": "086",
+    "slug": "086-glitch-cyber-runner",
+    "title": "Glitch Cyber Runner",
+    "theme": "Cyber Runner",
+    "mode": "expedition",
+    "goal": "outrace hunters",
+    "enemy": "turrets",
+    "summary": "explore the field and bag discoveries",
+    "colorA": "#12061b",
+    "colorB": "#52208d"
+  },
+  {
+    "id": "087",
+    "slug": "087-skylance-sky-raider",
+    "title": "Skylance Sky Raider",
+    "theme": "Sky Raider",
+    "mode": "expedition",
+    "goal": "capture beacons",
+    "enemy": "zeppelins",
+    "summary": "explore the field and bag discoveries",
+    "colorA": "#12233a",
+    "colorB": "#f97352"
+  },
+  {
+    "id": "088",
+    "slug": "088-hollow-haunted-escape",
+    "title": "Hollow Haunted Escape",
+    "theme": "Haunted Escape",
+    "mode": "expedition",
+    "goal": "seal portals",
+    "enemy": "phantoms",
+    "summary": "explore the field and bag discoveries",
+    "colorA": "#111827",
+    "colorB": "#374151"
+  },
+  {
+    "id": "089",
+    "slug": "089-temple-jungle-relic",
+    "title": "Temple Jungle Relic",
+    "theme": "Jungle Relic",
+    "mode": "expedition",
+    "goal": "follow maps",
+    "enemy": "traps",
+    "summary": "explore the field and bag discoveries",
+    "colorA": "#0d311e",
+    "colorB": "#4f7a2d"
+  },
+  {
+    "id": "090",
+    "slug": "090-current-ocean-frontier",
+    "title": "Current Ocean Frontier",
+    "theme": "Ocean Frontier",
+    "mode": "expedition",
+    "goal": "avoid predators",
+    "enemy": "mines",
+    "summary": "explore the field and bag discoveries",
+    "colorA": "#0b3440",
+    "colorB": "#1296d1"
+  },
+  {
+    "id": "091",
+    "slug": "091-shadow-spy-ops",
+    "title": "Shadow Spy Ops",
+    "theme": "Spy Ops",
+    "mode": "arena",
+    "goal": "extract intel",
+    "enemy": "guards",
+    "summary": "hold the arena against successive rushes",
+    "colorA": "#09111b",
+    "colorB": "#1f3a5f"
+  },
+  {
+    "id": "092",
+    "slug": "092-labyrinth-dungeon-crawler",
+    "title": "Labyrinth Dungeon Crawler",
+    "theme": "Dungeon Crawler",
+    "mode": "arena",
+    "goal": "break seals",
+    "enemy": "slimes",
+    "summary": "hold the arena against successive rushes",
+    "colorA": "#160f29",
+    "colorB": "#5b3f9b"
+  },
+  {
+    "id": "093",
+    "slug": "093-savage-heroic-fantasy-quest",
+    "title": "Savage Heroic Fantasy Quest",
+    "theme": "Heroic Fantasy Quest",
+    "mode": "arena",
+    "goal": "claim crystals",
+    "enemy": "serpent fiends",
+    "summary": "hold the arena against successive rushes",
+    "colorA": "#2f1608",
+    "colorB": "#b86712"
+  },
+  {
+    "id": "094",
+    "slug": "094-strike-arena-brawler",
+    "title": "Strike Arena Brawler",
+    "theme": "Arena Brawler",
+    "mode": "arena",
+    "goal": "outlast rivals",
+    "enemy": "sparring bots",
+    "summary": "hold the arena against successive rushes",
+    "colorA": "#260708",
+    "colorB": "#b11f31"
+  },
+  {
+    "id": "095",
+    "slug": "095-vector-space-patrol",
+    "title": "Vector Space Patrol",
+    "theme": "Space Patrol",
+    "mode": "arena",
+    "goal": "clear sectors",
+    "enemy": "pirates",
+    "summary": "hold the arena against successive rushes",
+    "colorA": "#070d22",
+    "colorB": "#2157d9"
+  },
+  {
+    "id": "096",
+    "slug": "096-glitch-cyber-runner",
+    "title": "Glitch Cyber Runner",
+    "theme": "Cyber Runner",
+    "mode": "arena",
+    "goal": "escape grids",
+    "enemy": "trackers",
+    "summary": "hold the arena against successive rushes",
+    "colorA": "#12061b",
+    "colorB": "#52208d"
+  },
+  {
+    "id": "097",
+    "slug": "097-skylance-sky-raider",
+    "title": "Skylance Sky Raider",
+    "theme": "Sky Raider",
+    "mode": "arena",
+    "goal": "salvage cargo",
+    "enemy": "tempests",
+    "summary": "hold the arena against successive rushes",
+    "colorA": "#12233a",
+    "colorB": "#f97352"
+  },
+  {
+    "id": "098",
+    "slug": "098-hollow-haunted-escape",
+    "title": "Hollow Haunted Escape",
+    "theme": "Haunted Escape",
+    "mode": "arena",
+    "goal": "survive midnight",
+    "enemy": "dolls",
+    "summary": "hold the arena against successive rushes",
+    "colorA": "#111827",
+    "colorB": "#374151"
+  },
+  {
+    "id": "099",
+    "slug": "099-temple-jungle-relic",
+    "title": "Temple Jungle Relic",
+    "theme": "Jungle Relic",
+    "mode": "arena",
+    "goal": "recover idols",
+    "enemy": "rivals",
+    "summary": "hold the arena against successive rushes",
+    "colorA": "#0d311e",
+    "colorB": "#4f7a2d"
+  },
+  {
+    "id": "100",
+    "slug": "100-current-ocean-frontier",
+    "title": "Current Ocean Frontier",
+    "theme": "Ocean Frontier",
+    "mode": "arena",
+    "goal": "repair subs",
+    "enemy": "sharks",
+    "summary": "hold the arena against successive rushes",
+    "colorA": "#0b3440",
+    "colorB": "#1296d1"
+  }
+];
+    const pageSize = 12;
+    let page = 1;
+
+    const grid = document.getElementById("grid");
+    const empty = document.getElementById("empty");
+    const meta = document.getElementById("meta");
+    const search = document.getElementById("search");
+    const themeFilter = document.getElementById("themeFilter");
+    const modeFilter = document.getElementById("modeFilter");
+    const prev = document.getElementById("prev");
+    const next = document.getElementById("next");
+    const pageLabel = document.getElementById("pageLabel");
+    const randomPick = document.getElementById("randomPick");
+
+    function unique(values) { return [...new Set(values)].sort((a, b) => a.localeCompare(b)); }
+    function fillSelect(select, values) {
+      for (const value of values) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+      }
+    }
+
+    fillSelect(themeFilter, unique(gameData.map((game) => game.theme)));
+    fillSelect(modeFilter, unique(gameData.map((game) => game.mode)));
+
+    function filteredGames() {
+      const query = search.value.trim().toLowerCase();
+      return gameData.filter((game) => {
+        const matchesQuery = !query || [game.title, game.theme, game.mode, game.goal, game.enemy].join(" ").toLowerCase().includes(query);
+        const matchesTheme = themeFilter.value === "all" || game.theme === themeFilter.value;
+        const matchesMode = modeFilter.value === "all" || game.mode === modeFilter.value;
+        return matchesQuery && matchesTheme && matchesMode;
+      });
+    }
+
+    function render() {
+      const filtered = filteredGames();
+      const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+      page = Math.min(page, totalPages);
+      const start = (page - 1) * pageSize;
+      const slice = filtered.slice(start, start + pageSize);
+
+      grid.innerHTML = "";
+      empty.hidden = slice.length > 0;
+
+      for (const game of slice) {
+        const article = document.createElement("article");
+        article.className = "card";
+        article.innerHTML =
+          '<div class="stamp" style="background: linear-gradient(135deg, ' + game.colorA + ', ' + game.colorB + ');">' +
+            '<small>' + game.id + '</small>' +
+            '<strong>' + game.title + '</strong>' +
+            '<small>' + game.theme + '</small>' +
+          '</div>' +
+          '<div class="body">' +
+            '<div class="pill-row">' +
+              '<span class="pill">' + game.mode + '</span>' +
+              '<span class="pill">' + game.enemy + '</span>' +
+            '</div>' +
+            '<p>' + game.goal + '. ' + game.summary + '.</p>' +
+            '<a href="' + prefix + game.slug + '/index.html">Play</a>' +
+          '</div>';
+        grid.appendChild(article);
+      }
+
+      meta.textContent = filtered.length + " games found across " + gameData.length + " total.";
+      pageLabel.textContent = "Page " + page + " of " + totalPages;
+      prev.disabled = page <= 1;
+      next.disabled = page >= totalPages;
+    }
+
+    function rerenderFromFirstPage() {
+      page = 1;
+      render();
+    }
+
+    search.addEventListener("input", rerenderFromFirstPage);
+    themeFilter.addEventListener("change", rerenderFromFirstPage);
+    modeFilter.addEventListener("change", rerenderFromFirstPage);
+    prev.addEventListener("click", () => { page -= 1; render(); });
+    next.addEventListener("click", () => { page += 1; render(); });
+    randomPick.addEventListener("click", () => {
+      const filtered = filteredGames();
+      if (!filtered.length) return;
+      const game = filtered[Math.floor(Math.random() * filtered.length)];
+      window.location.href = prefix + game.slug + "/index.html";
+    });
+
+    render();
+  </script>
+</body>
+</html>

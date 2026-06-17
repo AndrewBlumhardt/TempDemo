@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Current Ocean Frontier</title>
+  <style>
+    :root {
+      --bg-a: #0b3440;
+      --bg-b: #1296d1;
+      --panel: #0a141dcc;
+      --text: #f8fafc;
+      --accent: #f4b860;
+      --accent-2: #8df0cc;
+      --danger: #ff6b6b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 18% 16%, #ffffff14 0%, transparent 28%),
+        radial-gradient(circle at 82% 12%, #ffffff0e 0%, transparent 32%),
+        linear-gradient(145deg, var(--bg-a), var(--bg-b));
+      display: grid;
+      place-items: center;
+      padding: 16px;
+    }
+    .wrap {
+      width: min(1020px, 100%);
+      background: var(--panel);
+      border: 1px solid #ffffff24;
+      border-radius: 18px;
+      padding: 14px;
+      box-shadow: 0 20px 50px #00000066;
+      backdrop-filter: blur(3px);
+    }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: end;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(1.25rem, 2vw, 1.9rem);
+      line-height: 1.1;
+    }
+    .subtitle {
+      margin-top: 4px;
+      color: #dbeafe;
+      font-size: 0.95rem;
+    }
+    .hud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .chip {
+      background: #ffffff14;
+      border: 1px solid #ffffff28;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 250px;
+      gap: 12px;
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+      background: #07111b;
+      border-radius: 14px;
+      border: 2px solid #ffffff1f;
+    }
+    .panel {
+      border: 1px solid #ffffff20;
+      border-radius: 14px;
+      padding: 12px;
+      background: #0b1520ba;
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+    .panel p { margin: 0 0 8px; }
+    .panel strong { color: var(--accent-2); }
+    button, a.button {
+      display: inline-block;
+      width: 100%;
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: linear-gradient(180deg, #f5cb7c, #e59a28);
+      color: #281400;
+      text-decoration: none;
+      font-weight: 800;
+      cursor: pointer;
+      text-align: center;
+      margin-top: 8px;
+    }
+    .status {
+      margin-top: 10px;
+      min-height: 1.2em;
+      color: #fef3c7;
+      font-size: 0.95rem;
+    }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="top">
+      <div>
+        <h1>Current Ocean Frontier</h1>
+        <div class="subtitle">Inspired by underwater explorer games, rendered as a generic expedition arcade challenge.</div>
+      </div>
+      <a class="button" href="../../index.html">Back To Gallery</a>
+    </div>
+    <div class="hud">
+      <div class="chip">Score: <span id="score">0</span></div>
+      <div class="chip">Lives: <span id="lives">3</span></div>
+      <div class="chip">Level: <span id="level">1</span></div>
+      <div class="chip">Mode: expedition</div>
+    </div>
+    <section class="layout">
+      <canvas id="game" width="940" height="540" aria-label="Current Ocean Frontier"></canvas>
+      <aside class="panel">
+        <p><strong>Objective:</strong> avoid predators while dealing with mines.</p>
+        <p><strong>Controls:</strong> Move with WASD or Arrow keys. Press Space to pulse or strike.</p>
+        <p><strong>Loop:</strong> explore the field and bag discoveries.</p>
+        <p><strong>Challenge:</strong> Every 100 points raises enemy pressure.</p>
+        <button id="restart" type="button">Restart Run</button>
+      </aside>
+    </section>
+    <div class="status" id="status">Run live. Secure the field.</div>
+  </main>
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const scoreEl = document.getElementById("score");
+    const livesEl = document.getElementById("lives");
+    const levelEl = document.getElementById("level");
+    const statusEl = document.getElementById("status");
+    const restartBtn = document.getElementById("restart");
+    const keys = new Set();
+
+    const config = {
+      enemySpeed: 0.98,
+      spawnBias: 1.05
+    };
+
+    const game = {
+      running: true,
+      score: 0,
+      lives: 3,
+      level: 1,
+      enemies: [],
+      tokens: [],
+      particles: []
+    };
+
+    const player = {
+      x: 140,
+      y: canvas.height / 2,
+      r: 15,
+      speed: 245,
+      attackTimer: 0,
+      cooldown: 0,
+      facing: 1
+    };
+
+    function rand(min, max) { return Math.random() * (max - min) + min; }
+    function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+    function distance(ax, ay, bx, by) { return Math.hypot(ax - bx, ay - by); }
+
+    function spawnEnemy() {
+      const side = Math.floor(Math.random() * 4);
+      let x = 0;
+      let y = 0;
+      if (side === 0) { x = -24; y = rand(0, canvas.height); }
+      if (side === 1) { x = canvas.width + 24; y = rand(0, canvas.height); }
+      if (side === 2) { x = rand(0, canvas.width); y = -24; }
+      if (side === 3) { x = rand(0, canvas.width); y = canvas.height + 24; }
+      game.enemies.push({ x, y, r: rand(12, 20), speed: rand(70, 125) * config.enemySpeed + game.level * 8, hue: rand(0, 360) });
+    }
+
+    function spawnToken() {
+      game.tokens.push({ x: rand(60, canvas.width - 60), y: rand(60, canvas.height - 60), r: rand(7, 12), pulse: rand(0, Math.PI * 2) });
+    }
+
+    function emit(x, y, color) {
+      for (let index = 0; index < 8; index += 1) {
+        game.particles.push({ x, y, vx: rand(-140, 140), vy: rand(-140, 140), life: rand(0.25, 0.6), color });
+      }
+    }
+
+    function reset() {
+      game.running = true;
+      game.score = 0;
+      game.lives = 3;
+      game.level = 1;
+      game.enemies = [];
+      game.tokens = [];
+      game.particles = [];
+      player.x = 140;
+      player.y = canvas.height / 2;
+      player.attackTimer = 0;
+      player.cooldown = 0;
+      statusEl.textContent = "Run live. Secure the field.";
+      for (let index = 0; index < 4; index += 1) spawnToken();
+      for (let index = 0; index < 2; index += 1) spawnEnemy();
+    }
+
+    function update(dt) {
+      if (!game.running) return;
+
+      let dx = 0;
+      let dy = 0;
+      if (keys.has("ArrowLeft") || keys.has("a") || keys.has("A")) dx -= 1;
+      if (keys.has("ArrowRight") || keys.has("d") || keys.has("D")) dx += 1;
+      if (keys.has("ArrowUp") || keys.has("w") || keys.has("W")) dy -= 1;
+      if (keys.has("ArrowDown") || keys.has("s") || keys.has("S")) dy += 1;
+
+      const magnitude = Math.hypot(dx, dy) || 1;
+      player.x += (dx / magnitude) * player.speed * dt;
+      player.y += (dy / magnitude) * player.speed * dt;
+      if (dx !== 0) player.facing = Math.sign(dx);
+      player.x = clamp(player.x, player.r, canvas.width - player.r);
+      player.y = clamp(player.y, player.r, canvas.height - player.r);
+
+      player.cooldown = Math.max(0, player.cooldown - dt);
+      player.attackTimer = Math.max(0, player.attackTimer - dt);
+
+      if ((keys.has(" ") || keys.has("Space")) && player.cooldown <= 0) {
+        player.cooldown = 0.5;
+        player.attackTimer = 0.16;
+        emit(player.x, player.y, "#f4b860");
+      }
+
+      if (Math.random() < (0.011 + game.level * 0.0018) * config.spawnBias) {
+        spawnEnemy();
+      }
+      if (game.tokens.length < 5 && Math.random() < 0.03) {
+        spawnToken();
+      }
+
+      for (let index = game.tokens.length - 1; index >= 0; index -= 1) {
+        const token = game.tokens[index];
+        token.pulse += dt * 4;
+        if (distance(player.x, player.y, token.x, token.y) < player.r + token.r + 2) {
+          game.tokens.splice(index, 1);
+          game.score += 20;
+          emit(token.x, token.y, "#8df0cc");
+          if (game.score % 100 === 0) {
+            game.level += 1;
+            statusEl.textContent = "Level " + game.level + ". Pressure rising.";
+          }
+        }
+      }
+
+      for (let index = game.enemies.length - 1; index >= 0; index -= 1) {
+        const enemy = game.enemies[index];
+        const vx = player.x - enemy.x;
+        const vy = player.y - enemy.y;
+        const vm = Math.hypot(vx, vy) || 1;
+        enemy.x += (vx / vm) * enemy.speed * dt;
+        enemy.y += (vy / vm) * enemy.speed * dt;
+
+        if (player.attackTimer > 0 && distance(player.x, player.y, enemy.x, enemy.y) < player.r + enemy.r + 28) {
+          game.enemies.splice(index, 1);
+          game.score += 15;
+          emit(enemy.x, enemy.y, "hsl(" + enemy.hue + ", 90%, 65%)");
+          continue;
+        }
+
+        if (distance(player.x, player.y, enemy.x, enemy.y) < player.r + enemy.r) {
+          game.enemies.splice(index, 1);
+          game.lives -= 1;
+          emit(player.x, player.y, "#ff6b6b");
+          player.x = 140;
+          player.y = canvas.height / 2;
+          statusEl.textContent = game.lives > 0 ? "You took a hit. Recenter and push." : "Run failed.";
+          if (game.lives <= 0) {
+            game.running = false;
+          }
+        }
+      }
+
+      for (let index = game.particles.length - 1; index >= 0; index -= 1) {
+        const particle = game.particles[index];
+        particle.life -= dt;
+        particle.x += particle.vx * dt;
+        particle.y += particle.vy * dt;
+        particle.vx *= 0.96;
+        particle.vy *= 0.96;
+        if (particle.life <= 0) {
+          game.particles.splice(index, 1);
+        }
+      }
+    }
+
+    function drawBackground() {
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      gradient.addColorStop(0, "#07111b");
+      gradient.addColorStop(1, "#0c1a26");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = "#ffffff10";
+      for (let x = 0; x <= canvas.width; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= canvas.height; y += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+    }
+
+    function draw() {
+      drawBackground();
+
+      for (const token of game.tokens) {
+        const radius = token.r + Math.sin(token.pulse) * 1.5;
+        ctx.fillStyle = "#8df0cc";
+        ctx.beginPath();
+        ctx.arc(token.x, token.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      for (const enemy of game.enemies) {
+        ctx.fillStyle = "hsl(" + enemy.hue + ", 80%, 60%)";
+        ctx.beginPath();
+        ctx.arc(enemy.x, enemy.y, enemy.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      for (const particle of game.particles) {
+        ctx.fillStyle = particle.color;
+        ctx.globalAlpha = Math.max(particle.life, 0);
+        ctx.beginPath();
+        ctx.arc(particle.x, particle.y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+
+      ctx.fillStyle = "#f8d58a";
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (player.attackTimer > 0) {
+        ctx.strokeStyle = "#f4b860";
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        const start = player.facing > 0 ? -0.7 : Math.PI - 2.4;
+        const end = player.facing > 0 ? 0.7 : Math.PI + 2.4;
+        ctx.arc(player.x, player.y, 36, start, end);
+        ctx.stroke();
+      }
+
+      if (!game.running) {
+        ctx.fillStyle = "#000000aa";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#f8fafc";
+        ctx.textAlign = "center";
+        ctx.font = "700 46px Segoe UI";
+        ctx.fillText("Run Over", canvas.width / 2, canvas.height / 2 - 12);
+        ctx.font = "500 22px Segoe UI";
+        ctx.fillText("Press Restart Run to go again", canvas.width / 2, canvas.height / 2 + 26);
+      }
+
+      scoreEl.textContent = String(game.score);
+      livesEl.textContent = String(game.lives);
+      levelEl.textContent = String(game.level);
+    }
+
+    let lastTime = performance.now();
+    function tick(now) {
+      const dt = Math.min(0.033, (now - lastTime) / 1000);
+      lastTime = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(tick);
+    }
+
+    addEventListener("keydown", (event) => {
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " ", "Space"].includes(event.key)) {
+        event.preventDefault();
+      }
+      keys.add(event.key);
+    });
+    addEventListener("keyup", (event) => keys.delete(event.key));
+    restartBtn.addEventListener("click", reset);
+    reset();
+    requestAnimationFrame(tick);
+  </script>
+</body>
+</html>
